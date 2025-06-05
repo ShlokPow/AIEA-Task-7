@@ -1,9 +1,9 @@
 from fol_bc import KnowledgeBase
-from fol_bc import parse_literal
+from fol_bc import parse_literal, resolve_value
 
 def format_result(query, subst):
     qname, qargs = parse_literal(query)
-    resolved = [subst.get(arg, arg) for arg in qargs]
+    resolved = [resolve_value(subst.get(arg, arg), subst) for arg in qargs]
     return f"{qname}({', '.join(resolved)})"
 
 def main():
@@ -35,6 +35,7 @@ def main():
     kb.add_rule("Animal(X)", ["LaysEggs(X)"])
 
     queries = [
+        # Constant queries
         "Grandparent(Susan, Sam)",
         "Grandmother(Susan, Sam)",
         "Grandmother(Mary, Sam)",
@@ -46,7 +47,12 @@ def main():
         "WarmBlooded(Dog)",
         "Animal(Cat)",
         "Animal(Duck)",
-        "WarmBlooded(Duck)"
+        "WarmBlooded(Duck)",
+
+        # Examples with variables using ? notation
+        "Grandparent(Susan, ?Who)",
+        "Grandparent(?X, Sam)",
+        "HRManager(?Mgr)",
     ]
 
     for query in queries:
@@ -59,6 +65,8 @@ def main():
                 if output not in seen:
                     print("Yes:", output)
                     seen.add(output)
+        else:
+            print("No.")
 
 if __name__ == "__main__":
     main()

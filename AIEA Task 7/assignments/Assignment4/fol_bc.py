@@ -2,15 +2,33 @@ import re
 from collections import defaultdict
 
 def parse_literal(literal):
-    name, args = re.match(r"(\w+)\((.*)\)", literal).groups()
-    return (name, [arg.strip() for arg in args.split(",")])
+    """Parse a predicate string into a (name, args) tuple.
+
+    This parser accepts optional whitespace and variables that may be
+    written either as single upper-case letters or with a leading
+    question mark, e.g. ``?X``.
+    """
+    match = re.match(r"\s*(\w+)\s*\((.*)\)\s*", literal)
+    if not match:
+        raise ValueError(f"Invalid literal: {literal}")
+    name, args = match.groups()
+    arg_list = []
+    for arg in re.split(r"\s*,\s*", args):
+        if arg:
+            arg_list.append(arg.strip())
+    return (name, arg_list)
 
 def stringify_literal(lit):
     name, args = lit
     return f"{name}({', '.join(args)})"
 
 def is_variable(token):
-    return token[0].isupper()
+    """Return True if the token represents a logic variable."""
+
+    # Either a token beginning with '?' (e.g. ``?X``) or a single upper-case
+    # letter is treated as a variable.  This allows expressive variable names
+    # while still supporting the simpler ``X`` style used previously.
+    return token.startswith('?') or (len(token) == 1 and token.isupper())
 
 def unify(x, y, theta):
     if theta is None:
@@ -40,9 +58,16 @@ def unify_var(var, x, theta):
         theta[var] = x
         return theta
 
+def resolve_value(val, theta):
+    """Recursively resolve ``val`` through the substitution ``theta``."""
+    while isinstance(val, str) and val in theta:
+        val = theta[val]
+    return val
+
+
 def apply_substitution(literal, theta):
     name, args = literal
-    new_args = [theta.get(arg, arg) for arg in args]
+    new_args = [resolve_value(arg, theta) for arg in args]
     return (name, new_args)
 
 
